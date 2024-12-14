@@ -1,6 +1,20 @@
 // src/app/api/auth/[...nextauth]/route.ts
 import NextAuth from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
+import type { User } from 'next-auth';
+
+// Define our test user validation without passwordUtils for now
+const validateCredentials = (email: string, password: string) => {
+  return email === 'test@example.com' && password === 'Test123!@#$xyz';
+};
+
+declare module 'next-auth' {
+  interface Session {
+    user: User & {
+      id: string;
+    };
+  }
+}
 
 const handler = NextAuth({
   providers: [
@@ -10,14 +24,12 @@ const handler = NextAuth({
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" }
       },
-      async authorize(credentials) {
-        // Check if we have credentials
+      async authorize(credentials): Promise<User | null> {
         if (!credentials?.email || !credentials?.password) {
           return null;
         }
 
-        // Check for our test user
-        if (credentials.email === 'test@example.com' && credentials.password === 'password123') {
+        if (validateCredentials(credentials.email, credentials.password)) {
           return {
             id: "1",
             email: credentials.email,
@@ -25,13 +37,24 @@ const handler = NextAuth({
           };
         }
 
-        // If we get here, we have invalid credentials
         return null;
       }
     })
   ],
+  session: {
+    strategy: "jwt",
+    maxAge: 24 * 60 * 60, // 24 hours
+  },
   pages: {
-    signIn: '/auth/signin'
+    signIn: '/auth/signin',
+  },
+  callbacks: {
+    async session({ session, token }) {
+      if (session.user) {
+        session.user.id = token.sub ?? '';
+      }
+      return session;
+    }
   }
 });
 

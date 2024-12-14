@@ -1,25 +1,37 @@
-// src/lib/auth/utils.ts
-import { hash, compare } from 'bcryptjs';
-import { JWT } from 'next-auth/jwt';
-
-interface BasicUser {
-  id: string;
-  email: string;
-  name: string;
+// src/lib/auth/passwordUtils.ts
+export const passwordRequirements = {
+  minLength: 12,
+  requireUppercase: true,
+  requireLowercase: true,
+  requireNumbers: true,
+  requireSpecialChars: true
 }
 
-export async function hashPassword(password: string): Promise<string> {
-  return hash(password, 12);
-}
-
-export async function verifyPassword(password: string, hashedPassword: string): Promise<boolean> {
-  return compare(password, hashedPassword);
-}
-
-export function generateToken(user: BasicUser): JWT {
+export function validatePassword(password: string) {
+  const errors: string[] = []
+  
+  if (password.length < passwordRequirements.minLength) {
+    errors.push(`Password must be at least ${passwordRequirements.minLength} characters long`)
+  }
+  
+  if (passwordRequirements.requireUppercase && !/[A-Z]/.test(password)) {
+    errors.push('Password must contain at least one uppercase letter')
+  }
+  
+  if (passwordRequirements.requireLowercase && !/[a-z]/.test(password)) {
+    errors.push('Password must contain at least one lowercase letter')
+  }
+  
+  if (passwordRequirements.requireNumbers && !/\d/.test(password)) {
+    errors.push('Password must contain at least one number')
+  }
+  
+  if (passwordRequirements.requireSpecialChars && !/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
+    errors.push('Password must contain at least one special character')
+  }
+  
   return {
-    id: user.id,
-    email: user.email,
-    name: user.name
-  };
+    isValid: errors.length === 0,
+    errors
+  }
 }
